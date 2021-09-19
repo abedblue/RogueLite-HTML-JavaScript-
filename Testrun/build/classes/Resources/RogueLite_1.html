@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+
+<head style="margin: 0px; padding: 0px;">
+    <title>Page Title</title>
+    <style>
+        div
+        {
+            -webkit-transform: rotate(20deg);
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+
+<body style="margin: 0px; padding: 0px;">
+
+<p id="this"></p>
+<p id="that"></p>
+
+<canvas id="myCanvas" width="0" height="0" onmouseleave="mouseUp()" onmouseup="mouseUp();" onmouseDown="mouseDown();"
+        onmousemove="position(event)" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML5 canvas tag.</canvas>
+
+
+<p id = "maze"></p>
+
+<img src="https://docs.google.com/drawings/d/1rVT6uFrraHLyEHnz9I-IzspUuOd3PpjRk9r4ka2_crc/pub?w=960&h=720" id="pic" width="0">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARwAAACxCAMAAAAh3/JWAAAAA1BMVEUekP/tgdY3AAAASElEQVR4nO3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIALA8UNAAFusnLHAAAAAElFTkSuQmCC" id="rotatingBullet" width="0">
+<img id="chumbo" src="https://docs.google.com/drawings/d/e/2PACX-1vR1WfACHin9tmpsYjwM87dCYTaj7pgVo_npEQIZcKShFhTT9bH7qOsZgUkipgLc3oexHMyJOdy54tju/pub?w=960&h=720" height="0"
+     width="0">
+<img id="Obstacle" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQwAAAC8CAMAAAC672BgAAAAPFBMVEX/AJwB/+U88Q7/nAAAJP/FAP/1/wD+AADNAP1jGPz2A5UAAP4T1+P6AAIA/+og+ZE17gz8/wH9lQD/oQjqr0O7AAABDUlEQVR4nO3QBQGAQAAEsMfd+3elAReALcLK8GF7muDuk+usk2OvgnVpg2nskrlEMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmTIkCFDhgwZMmT8N+MFLVT+EzkSGLUAAAAASUVORK5CYII="
+     height="0" width="0">
+<img id="enemy1" src="https://docs.google.com/drawings/d/1GqBSCLUo2BPVjJ6VcrBCc5K7cjGGDBhiais40tfRWXw/pub?w=960&h=720" height="0"
+     width="0">
+
+<img id = "GameOver" src = "https://docs.google.com/drawings/d/1572iM63dQj9YwSx8loE3elwp6k1P_oUtw1Ilxxg-YAY/pub?w=960&h=720" height = "0" width = "0">
+
+<img id = "Terrain" src = "https://docs.google.com/drawings/d/1FRjpNXlbGuLxiab4nb2sWEgzz654p0jzLeCe9TlNqP0/pub?w=960&h=720" height = "0" width = "0">
+
+<img id = "DoorTexture" src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAACoCAMAAABt9SM9AAAAA1BMVEWAgICQdD0xAAAAR0lEQVR4nO3BAQEAAACCIP+vbkhAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO8GxYgAAb0jQ/cAAAAASUVORK5CYII=" height = "0" width = "0">
+
+</body>
+<script>
+    var globalX = 0;
+    var globalY = 0;
+
+
+    var screenHeight = window.innerHeight;
+
+    var screenWidth = window.innerWidth;
+
+    var VsizeRatio = screenHeight / 450;
+    var HsizeRatio = screenWidth / 450;
+    // screenSize / 450
+    var playerLeftBound = 405 * VsizeRatio;   //screenWidth
+    var playerRightBound = 480 * VsizeRatio;   //screenWidth
+    var playerUpperBound = 200 * VsizeRatio;   //screenHeight
+    var playerLowerBound = 275 * VsizeRatio;   //screenHeight
+
+    var playerYMidpoint = playerUpperBound + ((playerLowerBound - playerUpperBound)/2);
+
+    var playerXMidpoint = playerLeftBound + ((playerRightBound - playerLeftBound)/2);
+
+    var c = document.getElementById("myCanvas");
+
+    c.width = screenWidth - 15;                 //screenWidth
+    c.height = screenHeight - 60;                //screenHeight
+    var ctx = c.getContext("2d");
+    ctx.font="30px Verdana";
+
+
+
+    var pic = document.getElementById("pic");
+    var hero = document.getElementById("chumbo");
+    var deathScreen = document.getElementById("GameOver");
+    var terrain = document.getElementById("Terrain");
+    var door = document.getElementById("DoorTexture");
+
+    var down = false;
+    var atkTimer = 1;
+    var VshotSpeed = 20 //* (VsizeRatio/HsizeRatio);
+    var HshotSpeed = 20 //* (VsizeRatio/HsizeRatio);
+    var HmoveSpeed = 8 //* HsizeRatio;        //may need to specify vertical and horizontal speed
+    var VmoveSpeed = 8 //* VsizeRatio;
+    var power = 0.5;
+    var Hknockback = 2 //* HsizeRatio;        //may need to specify vertical and horizontal knockback
+    var Vknockback = 2 //* VsizeRatio;
+    var HbulletSize = 30 * HsizeRatio;      //may need to specify vertical and horizontal bulletSize
+    var VbulletSize = 30 * VsizeRatio;
+    var range = 15;
+    var health = 1000;
+    var godMode = false;
+    var onTerrain = false;
+    var flying = false;
+    var abnormalBullets = false;
+
+    var cx = 0;
+    var cy = 0;
+    var counter = 1;
+
+    var hypo = 0;
+    var angle = 0;
+
+    var tdy = 0;
+    var tdx = 0;
+
+    var upPressed = false;
+    var downPressed = false;
+    var leftPressed = false;
+    var rightPressed = false;
+
+    var playerblockedx = false;
+    var playerblockedy = false;
+
+    var sent = 0;
+    var myArr = [];
+    var myObsArr = [];
+    var myEnemyArr = [];
+
+    var invincibilityTimer = 0;
+
+    var tempa;
+    var tempb;
+    var tempc;
+
+    var spaceholder = "pickles";
+
+    var maze = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0]
+    ];
+
+    //Think of this representation of the maze as an upside down view of the map (inverted over x-axis, not y-axis)
+
+    var mazeStart =  Math.floor(Math.random() * 7);
+    var mazeMax = mazeStart;
+    var mazeMin = mazeStart;
+
+    //These next two variables are for tracking position within the maze, not creating the maze
+
+    var currRow = 0;
+    var currCol = mazeStart;
+
+    function makeFloor()
+    {
+
+        for(var r = 0; r < 7; r++)
+        {
+
+
+            maze[r][mazeStart] = 1;
+            for(var c = mazeStart - 1; c >= 0; c--)
+            {
+                if(Math.random() < 0.5)
+                {
+                    maze[r][c] = 1;
+                    mazeMin -= 1;
+                }
+                else
+                {
+                    c = -1;
+                }
+            }
+            for(var k = mazeStart + 1; k <= 6; k++)
+            {
+                if(Math.random() < 0.5)
+                {
+                    maze[r][k] = 1;
+                    mazeMax += 1;
+                }
+                else
+                {
+                    k = 7;
+                }
+            }
+            mazeStart = Math.floor(Math.random() * (mazeMax - mazeMin)) + mazeMin;
+            mazeMax = mazeStart;
+            mazeMin = mazeStart;
+        }
+        //document.getElementById("maze").innerHTML = maze;
+    }
+
+    makeFloor();
+
+
+    myObsArr[0] = { type: "border", width: 500 * HsizeRatio, height: 520 * VsizeRatio, x: 0 * HsizeRatio, y: -500 * VsizeRatio};              //screenWidth and height
+
+    myObsArr[1] = { type: "border", width: 520 * HsizeRatio, height: 1500 * VsizeRatio, x: 500 * HsizeRatio, y: -500 * VsizeRatio };//
+
+    myObsArr[2] = { type: "terrain", width: 75 * VsizeRatio, height: 75 * VsizeRatio, x: 500 * VsizeRatio, y: 200 * VsizeRatio };//
+
+    myObsArr[3] = { type: "border", width: 500 * HsizeRatio, height: 520 * VsizeRatio, x: 0 * HsizeRatio, y: 500 * VsizeRatio };//
+
+    myObsArr[4] = { type: "border", width: 520 * HsizeRatio, height: 1500 * VsizeRatio, x: -500 * HsizeRatio, y: -500 * VsizeRatio };//
+
+    myObsArr[5] = { type: "obstacle", width: 75 * VsizeRatio, height: 75 * VsizeRatio, x: 300 * VsizeRatio, y: 200 * VsizeRatio };//
+
+    myObsArr[6] = { type: "door", width: 100 * HsizeRatio, height: 25 * VsizeRatio, x: 200 * HsizeRatio, y: 495 * VsizeRatio, exists: true };//
+
+    myObsArr[7] = { type: "door", width: 25 * HsizeRatio, height: 100 * VsizeRatio, x: 0 * HsizeRatio, y: 200 * VsizeRatio, exists: true };//
+
+    myObsArr[8] = { type: "door", width: 25 * HsizeRatio, height: 100 * VsizeRatio, x: 495 * HsizeRatio, y: 200 * VsizeRatio, exists: true };//
+
+    myObsArr[9] = { type: "door", width: 100 * HsizeRatio, height: 25 * VsizeRatio, x: 200 * HsizeRatio, y: 0 * VsizeRatio, exists: true };//
+
+
+    //Add Flying status for enemies (already added flying for the player)
+
+    myEnemyArr[0] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: false, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, onTerrain:false, flying:true }; //remember to fix the speed attribute for enemies
+
+    myEnemyArr[1] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: false, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, onTerrain:false, flying:true  };//
+
+    myEnemyArr[2] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: false, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, onTerrain:false, flying:true  };//
+
+    myEnemyArr[3] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: true, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, onTerrain:false, flying:true  };//
+
+    myEnemyArr[4] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: true, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, onTerrain:false, flying:true  };//
+
+    myEnemyArr[5] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: true, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, onTerrain:false, flying:true  };//
+
+    myEnemyArr[6] = { type: "basic", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (Math.random() * 1.5 + 0.5) * VsizeRatio, Hspeed: (Math.random() * 1.5 + 0.5) * HsizeRatio, seek: false, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, targetedShots:false, shotTime:50, shotTimer:50, range: 50, myVBulletSize: 20 * VsizeRatio, myHBulletSize: 20 * HsizeRatio, onTerrain:false, flying:true };//
+
+    myEnemyArr[7] = { type: "shooting", width: 25 * HsizeRatio, height: 25 * VsizeRatio, x: 100 * HsizeRatio, y: 100 * VsizeRatio, hp: 10, wander: true, wanderx: 1, wandery: 1, Vspeed: (1) * VsizeRatio, Hspeed: (1) * HsizeRatio, seek: true, blockedx: false, blockedy: false, lastKBx:0, lastKBy:0, lastX:100 * HsizeRatio, lastY:100 * VsizeRatio, targetedShots:true, shotTime:30, shotTimer:30, range: 50, myVBulletSize: 20 * VsizeRatio, myHBulletSize: 20 * HsizeRatio, myVShotSpeed: 15 * (VsizeRatio/HsizeRatio), myHShotSpeed: 15 * (VsizeRatio/HsizeRatio), onTerrain:false, flying:true };//
+
+    document.addEventListener("keydown", keyDownHandler, false);
+    document.addEventListener("keyup", keyUpHandler, false);
+
+    function keyDownHandler(e) {
+        if (e.keyCode == 87) {
+            upPressed = true;
+        }
+        else if (e.keyCode == 83) {
+            downPressed = true;
+        }
+        else if (e.keyCode == 65) {
+            leftPressed = true;
+        }
+        else if (e.keyCode == 68) {
+            rightPressed = true;
+        }
+    }
+
+    function keyUpHandler(e) {
+        if (e.keyCode == 87) {
+            upPressed = false;
+        }
+        else if (e.keyCode == 83) {
+            downPressed = false;
+        }
+        else if (e.keyCode == 65) {
+            leftPressed = false;
+        }
+        else if (e.keyCode == 68) {
+            rightPressed = false;
+        }
+    }
+
+
+    function mouseDown() {
+        down = true;
+
+    }
+    function mouseUp() {
+        down = false;
+
+    }
+
+    function position(event) {
+        cy = event.clientY - (screenHeight / 2) - (VbulletSize * 0.75) - (((50 * 1) - VbulletSize)/2); //screenHeight
+        cx = event.clientX - (screenWidth / 2) - 0;                                                 //screenWidth
+        hypo = Math.sqrt(((cx) * (cx)) + ((cy) * (cy)));
+
+        angle = (Math.acos(cx / hypo));
+        tdx = Math.cos(angle);
+
+        if (cy < 0) {
+            tdy = -1 * Math.sin(angle);
+        }
+        else {
+            tdy = Math.sin(angle);
+        }
+    }
+
+    function onClick() {
+        if (down == true && counter == 0) {
+            myArr[myArr.length] = { type: "bullet", x: (screenWidth / 2) + (HbulletSize / 2), y: (screenHeight / 2) - (VbulletSize) + (((50 * 1) - VbulletSize)/2), dx: tdx * HshotSpeed, dy: tdy * VshotSpeed, bRange: range, thisHBulletSize: HbulletSize, thisVBulletSize: VbulletSize };  //make change to horizontal and vertical bulletsize here
+
+
+        }
+    }
+
+    function roomNewUpdate(){
+        for(i = myObsArr.length - 4; i < myObsArr.length - 1; i++)
+        {
+            myObsArr[i].exists = false;
+        }
+    }
+
+    function roomDoneUpdate(){
+        for(i = myObsArr.length - 4; i <= myObsArr.length - 1; i++)
+        {
+            myObsArr[i].exists = true;
+        }
+        if(currRow == 0 || maze[currRow - 1][currCol] == 0)
+        {
+            myObsArr[myObsArr.length - 4].exists = false;
+        }
+        if(currCol == 6 || maze[currRow][currCol + 1] == 0)//right
+        {
+            myObsArr[myObsArr.length - 2].exists = false;
+        }
+        if(currCol == 0 || maze[currRow][currCol - 1] == 0) //left
+        {
+            myObsArr[myObsArr.length - 3].exists = false;
+        }
+        if(currRow == 6 || maze[currRow + 1][currCol] == 0) //top
+        {
+            myObsArr[myObsArr.length - 1].exists = false;
+        }
+    }
+
+    roomDoneUpdate();
+
+    function update() {
+        if (health > 0) {
+
+
+            onClick();
+
+
+            playerblockedy = false;
+
+            if (upPressed == true) {
+                globalY += VmoveSpeed;
+                for (i = 0; i < myObsArr.length; i++) {
+                    if (myObsArr[i].x + globalX < playerRightBound && myObsArr[i].x + globalX + myObsArr[i].width > playerLeftBound && myObsArr[i].y + globalY < playerLowerBound && myObsArr[i].y + globalY + myObsArr[i].height > playerUpperBound) {
+
+                        if (myObsArr[i].type == "obstacle" || myObsArr[i].type == "border") {
+                            if (flying == false || myObsArr[i].type == "border") {
+                                globalY += (playerUpperBound - myObsArr[i].y - myObsArr[i].height - globalY) * 1.01;
+                                playerblockedy = true;
+                            }
+                        }
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = true;
+                        }
+                        if (myObsArr[i].type == "door") {
+                            if (i == myObsArr.length - 4 && myObsArr[i].exists == true) {
+                                currRow -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 3 && myObsArr[i].exists == true) {
+                                currCol -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 2 && myObsArr[i].exists == true) {
+                                currCol += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 1 && myObsArr[i].exists == true) {
+                                currRow += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                        }
+                    }
+                    else {
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = false;
+                        }
+                    }
+                }
+            }
+
+            if (downPressed == true) {
+                globalY -= VmoveSpeed;
+                for (i = 0; i < myObsArr.length; i++) {
+                    if (myObsArr[i].x + globalX < playerRightBound && myObsArr[i].x + globalX + myObsArr[i].width > playerLeftBound && myObsArr[i].y + globalY < playerLowerBound && myObsArr[i].y + globalY + myObsArr[i].height > playerUpperBound) {
+
+                        if (myObsArr[i].type == "obstacle" || myObsArr[i].type == "border") {
+                            if (flying == false || myObsArr[i].type == "border") {
+                                globalY += (playerLowerBound - myObsArr[i].y - globalY) * 1.01;
+                                playerblockedy = true;
+                            }
+                        }
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = true;
+                        }
+                        if (myObsArr[i].type == "door") {
+                            if (i == myObsArr.length - 4 && myObsArr[i].exists == true) {
+                                currRow -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 3 && myObsArr[i].exists == true) {
+                                currCol -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 2 && myObsArr[i].exists == true) {
+                                currCol += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 1 && myObsArr[i].exists == true) {
+                                currRow += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                        }
+                    }
+                    else {
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = false;
+                        }
+                    }
+                }
+            }
+
+
+            playerblockedx = false;
+
+
+            if (leftPressed == true) {
+                globalX += HmoveSpeed;
+                for (i = 0; i < myObsArr.length; i++) {
+                    if (myObsArr[i].x + globalX < playerRightBound && myObsArr[i].x + globalX + myObsArr[i].width > playerLeftBound && myObsArr[i].y + globalY < playerLowerBound && myObsArr[i].y + globalY + myObsArr[i].height > playerUpperBound) {
+
+                        if (myObsArr[i].type == "obstacle" || myObsArr[i].type == "border") {
+                            if (flying == false || myObsArr[i].type == "border") {
+                                globalX += (playerLeftBound - myObsArr[i].x - myObsArr[i].width - globalX) * 1.01;
+                                playerblockedx = true;
+                            }
+                        }
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = true;
+                        }
+                        if (myObsArr[i].type == "door" && myObsArr[i].exists == true) {
+                            if (i == myObsArr.length - 4 && myObsArr[i].exists == true) {
+                                currRow -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 3 && myObsArr[i].exists == true) {
+                                currCol -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 2 && myObsArr[i].exists == true) {
+                                currCol += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 1 && myObsArr[i].exists == true) {
+                                currRow += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                        }
+                    }
+                    else {
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = false;
+                        }
+                    }
+                }
+
+            }
+
+
+            if (rightPressed == true) {
+
+                globalX -= HmoveSpeed;
+                for (i = 0; i < myObsArr.length; i++) {
+                    if (myObsArr[i].x + globalX < playerRightBound && myObsArr[i].x + globalX + myObsArr[i].width > playerLeftBound && myObsArr[i].y + globalY < playerLowerBound && myObsArr[i].y + globalY + myObsArr[i].height > playerUpperBound) {
+
+                        if (myObsArr[i].type == "obstacle" || myObsArr[i].type == "border") {
+                            if (flying == false || myObsArr[i].type == "border") {
+                                globalX += (playerRightBound - myObsArr[i].x - globalX) * 1.01;
+                                playerblockedx = true;
+                            }
+                        }
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = true;
+                        }
+                        if (myObsArr[i].type == "door") {
+                            if (i == myObsArr.length - 4 && myObsArr[i].exists == true) {
+                                currRow -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 3 && myObsArr[i].exists == true) {
+                                currCol -= 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 2 && myObsArr[i].exists == true) {
+                                currCol += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                            if (i == myObsArr.length - 1 && myObsArr[i].exists == true) {
+                                currRow += 1;
+                                globalX = 0;
+                                globalY = 0;
+                                roomDoneUpdate();
+
+                            }
+                        }
+                    }
+                    else {
+                        if (myObsArr[i].type == "terrain") {
+                            onTerrain = false;
+                        }
+                    }
+                }
+            }
+//The 1.01 multiplication is to ensure the player cant glitch through the hitbox of an obstacle
+
+            ctx.clearRect(0, 0, c.width, c.height);
+
+            for (i = 0; i < myObsArr.length; i++) {
+                if (myObsArr[i].type == "obstacle" || myObsArr[i].type == "border") {
+                    ctx.drawImage(Obstacle, globalX + myObsArr[i].x, globalY + myObsArr[i].y, myObsArr[i].width, myObsArr[i].height);
+                }
+
+                if (myObsArr[i].type == "terrain") {
+                    ctx.drawImage(terrain, globalX + myObsArr[i].x, globalY + myObsArr[i].y, myObsArr[i].width, myObsArr[i].height);
+                }
+
+                if (myObsArr[i].type == "door" && myObsArr[i].exists == true) {
+                    ctx.drawImage(door, globalX + myObsArr[i].x, globalY + myObsArr[i].y, myObsArr[i].width, myObsArr[i].height);
+                }
+
+            }
+
+            for (i = sent; i < myArr.length; i++) {
+                if (myArr[i] != spaceholder && myArr[i] != null) {
+
+                    myArr[i].bRange -= 1;
+
+                    if (upPressed == true) {
+                        if (playerblockedy == false) {
+                            myArr[i].y += VmoveSpeed;
+                        }
+                    }
+                    if (downPressed == true) {
+                        if (playerblockedy == false) {
+                            myArr[i].y -= VmoveSpeed;
+                        }
+                    }
+                    if (leftPressed == true) {
+                        if (playerblockedx == false) {
+                            myArr[i].x += HmoveSpeed;
+                        }
+                    }
+                    if (rightPressed == true) {
+                        if (playerblockedx == false) {
+                            myArr[i].x -= HmoveSpeed;
+                        }
+                    }
+
+                    myArr[i].x = myArr[i].x + myArr[i].dx;
+                    myArr[i].y = myArr[i].y + myArr[i].dy;
+
+                    ctx.drawImage(pic, myArr[i].x - (myArr[i].thisHBulletSize), myArr[i].y + (myArr[i].thisVBulletSize), myArr[i].thisHBulletSize, myArr[i].thisVBulletSize);
+
+                    for (k = 0; k < myObsArr.length; k++) {
+                        if ((myArr[i].x - (1.5 * myArr[i].thisHBulletSize / 2) <= myObsArr[k].x + myObsArr[k].width + globalX) && (myArr[i].x - (0.5 * myArr[i].thisVBulletSize / 2) >= myObsArr[k].x + globalX) && (myArr[i].y + (0.5 * myArr[i].thisHBulletSize) <= myObsArr[k].y + myObsArr[k].height + globalY) && (myArr[i].y + (1.25 * myArr[i].thisVBulletSize * 1.5) >= myObsArr[k].y + globalY)) {
+                            if (myObsArr[k].type == "obstacle" || myObsArr[k].type == "border") {
+                                myArr[i] = spaceholder;
+                            }
+                        }
+
+                        if (myArr[i].bRange <= 0) {
+                            myArr[i] = spaceholder;
+                        }
+
+                    }
+
+                    for (l = 0; l < myEnemyArr.length; l++) {
+
+
+                        if (myEnemyArr[l] == spaceholder) {
+                            myEnemyArr[l] = null;
+                        }
+                        if (myEnemyArr[l] != null) {
+
+
+                            myEnemyArr[l].lastKBx = 0;
+                            myEnemyArr[l].lastKBy = 0;
+
+                            if (myArr[i].type == "bullet" && (myArr[i].x - (1.5 * myArr[i].thisHBulletSize / 2) <= myEnemyArr[l].x + myEnemyArr[l].width + globalX) && (myArr[i].x - (0.5 * myArr[i].thisHBulletSize / 2) >= myEnemyArr[l].x + globalX) && (myArr[i].y + (0.75 * myArr[i].thisVBulletSize * 1.5) <= myEnemyArr[l].y + myEnemyArr[l].height + globalY) && (myArr[i].y + (1.25 * myArr[i].thisVBulletSize * 1.5) >= myEnemyArr[l].y + globalY)) {
+
+                                if (myEnemyArr[l].blockedx == false) {
+                                    myEnemyArr[l].lastKBx = myArr[i].dx * Hknockback;
+                                    myEnemyArr[l].x += myEnemyArr[l].lastKBx;
+                                }
+                                if (myEnemyArr[l].blockedy == false) {
+                                    myEnemyArr[l].lastKBy = myArr[i].dy * Vknockback;
+                                    myEnemyArr[l].y += myEnemyArr[l].lastKBy;
+                                }
+                                myArr[i] = spaceholder;
+                                myEnemyArr[l].hp -= power;
+
+                            }
+                            //Put player/EnemyBullet Colision detection here. have an if statement check to see if its an enemyBullet first to avoid unnecissary checks and potential lag. if an enemyBullet collides with the player, health should be reduced and that enemyBullet should be removed.
+
+                            if (myArr[i].type == "enemyBullet") {
+
+                                if ((myArr[i].x - (1.5 * myArr[i].thisHBulletSize / 2) <= playerRightBound) && (myArr[i].x - (0.5 * myArr[i].thisHBulletSize / 2) >= playerLeftBound) && (myArr[i].y + (0.75 * myArr[i].thisVBulletSize * 1.5) <= playerLowerBound) && (myArr[i].y + (1.25 * myArr[i].thisVBulletSize * 1.5) >= playerUpperBound)) {
+                                    myArr[i] = spaceholder;
+                                    if (invincibilityTimer == 0) {
+                                        health -= 1;
+                                        invincibilityTimer = 25;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
+                }
+                else {
+                    myArr[i] = null;
+                }
+            }
+
+
+            for (i = 0; i < myEnemyArr.length; i++) {
+                if (myEnemyArr[i] != null) {
+
+                    if (myEnemyArr[i].wander == true && myEnemyArr[i].seek == false) {
+                        if (Math.floor(Math.random() * 50) == 0) {
+                            myEnemyArr[i].wanderx *= -1;
+                        }
+                        if (Math.floor(Math.random() * 50) == 0) {
+                            myEnemyArr[i].wandery *= -1;
+                        }
+                    }
+
+                    if (myEnemyArr[i].wander == true && myEnemyArr[i].seek == true) {
+
+                        if (myEnemyArr[i].x + globalX < playerXMidpoint - 1 && myEnemyArr[i].blockedy == false) {
+                            myEnemyArr[i].wanderx = 1;
+                        }
+
+                        if (myEnemyArr[i].x + globalX >= playerXMidpoint - 1 && myEnemyArr[i].x + globalX <= playerXMidpoint + 1 && myEnemyArr[i].blockedy == false) {
+                            myEnemyArr[i].wanderx = 0;
+                        }
+
+                        if (myEnemyArr[i].x + globalX >= playerXMidpoint - 1 && myEnemyArr[i].x + globalX <= playerXMidpoint + 1 && myEnemyArr[i].blockedy == true) {
+                            myEnemyArr[i].wanderx = 1;
+                        }
+
+
+                        if (myEnemyArr[i].x + globalX > playerXMidpoint + 1 && myEnemyArr[i].blockedy == false) {
+                            myEnemyArr[i].wanderx = -1;
+                        }
+
+                        if (myEnemyArr[i].y + globalY < playerYMidpoint - 1 && myEnemyArr[i].blockedx == false) {
+                            myEnemyArr[i].wandery = 1;
+                        }
+
+                        if (myEnemyArr[i].y + globalY >= playerYMidpoint - 1 && myEnemyArr[i].y + globalY <= playerYMidpoint + 1 && myEnemyArr[i].blockedx == false) {
+                            myEnemyArr[i].wandery = 0;
+                        }
+
+                        if (myEnemyArr[i].y + globalY >= playerYMidpoint - 1 && myEnemyArr[i].y + globalY <= playerYMidpoint + 1 && myEnemyArr[i].blockedx == true) {
+                            myEnemyArr[i].wandery = 1;
+                        }
+
+                        if (myEnemyArr[i].y + globalY > playerYMidpoint + 1 && myEnemyArr[i].blockedx == false) {
+                            myEnemyArr[i].wandery = -1;
+                        }
+
+                    }
+
+                    myEnemyArr[i].blockedx = false;
+
+                    myEnemyArr[i].x += myEnemyArr[i].Hspeed * myEnemyArr[i].wanderx;
+
+                    for (a = 0; a < myObsArr.length; a++) {
+                        if (myObsArr[a].x < myEnemyArr[i].x + myEnemyArr[i].width && myObsArr[a].x + myObsArr[a].width > myEnemyArr[i].x && myObsArr[a].y < myEnemyArr[i].y + myEnemyArr[i].height && myObsArr[a].y + myObsArr[a].height > myEnemyArr[i].y) {
+
+
+                            if ((myObsArr[a].type == "obstacle" && myEnemyArr[i].flying == false) || myObsArr[a].type == "border") {
+                                myEnemyArr[i].x = myEnemyArr[i].lastX;
+
+                                myEnemyArr[i].blockedx = true;
+                            }
+                            if (myObsArr[a].type == "terrain" && myEnemyArr[i].flying == false) {
+                                myEnemyArr[i].onTerrain = true;
+                            }
+                        }
+                    }
+
+                    myEnemyArr[i].blockedy = false;
+
+                    myEnemyArr[i].y += myEnemyArr[i].Vspeed * myEnemyArr[i].wandery;
+
+
+                    for (a = 0; a < myObsArr.length; a++) {
+                        if (myObsArr[a].x < myEnemyArr[i].x + myEnemyArr[i].width && myObsArr[a].x + myObsArr[a].width > myEnemyArr[i].x && myObsArr[a].y < myEnemyArr[i].y + myEnemyArr[i].height && myObsArr[a].y + myObsArr[a].height > myEnemyArr[i].y) {
+                            if ((myObsArr[a].type == "obstacle" && myEnemyArr[i].flying == false) || myObsArr[a].type == "border") {
+                                myEnemyArr[i].y = myEnemyArr[i].lastY;
+
+                                myEnemyArr[i].blockedy = true;
+                            }
+                            if (myObsArr[a].type == "terrain" && myEnemyArr[i].flying == false) {
+                                myEnemyArr[i].onTerrain = true;
+                            }
+                        }
+                    }
+
+                    if (myEnemyArr[i].onTerrain == true) {
+                        myEnemyArr[i].hp -= 1;
+                        myEnemyArr[i].onTerrain = false;
+                    }
+                    if (myEnemyArr[i].hp <= 0) {
+                        myEnemyArr[i] = spaceholder;
+                    }
+
+
+                    if ((myEnemyArr[i].x + globalX - (0 * myEnemyArr[i].width / 2) <= playerRightBound) && (myEnemyArr[i].x + globalX + (2 * myEnemyArr[i].width / 2) >= playerLeftBound) && (myEnemyArr[i].y + globalY + (0 * myEnemyArr[i].height * 1.5) <= playerLowerBound) && (myEnemyArr[i].y + globalY + (1 * myEnemyArr[i].height * 1) >= playerUpperBound)) {
+                        if (invincibilityTimer == 0) {
+                            health -= 1;
+                            invincibilityTimer = 25;
+                        }
+                    }
+
+//Player-Enemy Collision Detection ^^^^^
+
+
+                    if (myEnemyArr[i].type == "shooting") {
+
+                        myEnemyArr[i].shotTimer -= 1;
+
+                        if (myEnemyArr[i].shotTimer <= 0) {
+                            myEnemyArr[i].shotTimer = myEnemyArr[i].shotTime;
+
+                            if (myEnemyArr[i].targetedShots == false) {
+                                myArr[myArr.length] = {
+                                    type: "enemyBullet",
+                                    x: myEnemyArr[i].x + globalX + myEnemyArr[i].myHBulletSize,
+                                    y: myEnemyArr[i].y + globalY - myEnemyArr[i].myVBulletSize,
+                                    dx: (Math.random() * 7 - 3) * HsizeRatio,
+                                    dy: (Math.random() * 7 - 3) * VsizeRatio,
+                                    bRange: myEnemyArr[i].range,
+                                    thisHBulletSize: myEnemyArr[i].myHBulletSize,
+                                    thisVBulletSize: myEnemyArr[i].myVBulletSize
+                                };
+
+                            }
+                            if (myEnemyArr[i].targetedShots == true) {
+                                tempa = myEnemyArr[i].y + globalY - (screenHeight / 2) - (myEnemyArr[i].myVBulletSize / 2);                                                //screenHeight
+                                tempb = myEnemyArr[i].x + globalX - (screenWidth / 2) + (myEnemyArr[i].myHBulletSize / 2);                                                //screenWidth
+                                tempc = Math.sqrt((tempa * tempa) + (tempb * tempb));
+
+                                myArr[myArr.length] = {
+                                    type: "enemyBullet",
+                                    x: myEnemyArr[i].x + globalX + myEnemyArr[i].myHBulletSize,
+                                    y: myEnemyArr[i].y + globalY - myEnemyArr[i].myVBulletSize,
+                                    dx: Math.asin(tempb / tempc) * -1 * myEnemyArr[i].myHShotSpeed * HsizeRatio,
+                                    dy: Math.asin(tempa / tempc) * -1 * myEnemyArr[i].myVShotSpeed * VsizeRatio,
+                                    bRange: myEnemyArr[i].range,
+                                    thisHBulletSize: myEnemyArr[i].myHBulletSize,
+                                    thisVBulletSize: myEnemyArr[i].myVBulletSize
+                                };
+
+                            }
+                        }
+                    }
+
+                    if (onTerrain == true && invincibilityTimer == 0 && flying == false) {
+                        health -= 1;
+                        invincibilityTimer = 25;
+                    }
+
+                    if (invincibilityTimer > 0) {
+                        invincibilityTimer -= 1;
+                    }
+
+                    myEnemyArr[i].lastX = myEnemyArr[i].x;
+                    myEnemyArr[i].lastY = myEnemyArr[i].y;
+
+                    ctx.drawImage(enemy1, globalX + myEnemyArr[i].x, globalY + myEnemyArr[i].y, myEnemyArr[i].width, myEnemyArr[i].height);
+
+
+                }
+            }
+
+
+            ctx.drawImage(hero, playerLeftBound, playerUpperBound, playerRightBound - playerLeftBound, playerLowerBound - playerUpperBound);
+
+
+            ctx.fillStyle = "#000000";
+            ctx.fillText("HP: " + health, 50 * VsizeRatio, 50 * HsizeRatio);                         //Vertical and Horizontal sizeRatio
+
+
+            if (down == true || (counter > 0 && down == false)) {
+                counter++;
+            }
+            if (counter >= atkTimer + 1) {
+                counter = 0;
+            }
+
+
+            if (health < 1) {
+                ctx.drawImage(deathScreen, 0, 0, c.width, c.height);
+            }
+        }
+        //document.getElementById("that").innerHTML = currCol + " " + currRow;
+        //document.getElementById("that").innerHTML = (maze[currRow - 1][currCol] == 0) + (maze[currRow][currCol + 1] == 0) + (maze[currRow][currCol - 1] == 0) + (maze[currRow + 1][currCol] == 0);
+    }
+    //window.scrollTo(0,1);
+    //c.width = screenWidth;
+    //c.height = screenHeight;
+    setInterval(update, 40);
+
+
+
+</script>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
